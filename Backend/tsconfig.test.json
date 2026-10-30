@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true },
+  "include": ["tests/unit.test.ts", "tests/admin-auth.test.ts"],
+  "files": []
+}
