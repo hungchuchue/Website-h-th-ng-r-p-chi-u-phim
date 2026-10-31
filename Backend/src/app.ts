@@ -20,8 +20,11 @@ if (fs.existsSync(swaggerPath)) {
   const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, 'utf-8'));
   // The local server does not terminate TLS. Swagger must use HTTP in
   // development instead of choosing the first generated HTTPS scheme.
-  if (config.env === 'development') swaggerDocument.schemes = ['http'];
- app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  if (config.env === 'development') {
+    swaggerDocument.schemes = ['http'];
+    swaggerDocument.servers = [{ url: `http://localhost:${config.port}/api/v1`, description: 'Local development' }];
+  }
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }
 
 // Security middlewares

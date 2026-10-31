@@ -6,24 +6,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
-const errorHandler_1 = require("./middleware/errorHandler");
-const routes_1 = __importDefault(require("./routes"));
+const errorHandler_1 = require("./src/middleware/errorHandler");
+const routes_1 = __importDefault(require("./src/routes"));
 const fs_1 = __importDefault(require("fs"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const path_1 = __importDefault(require("path"));
-const logger_1 = require("./utils/logger");
-const config_1 = require("./config");
+const logger_1 = require("./src/utils/logger");
+const config_1 = require("./src/config");
 const app = (0, express_1.default)();
 // Trust proxy if behind Cloudflare/Nginx (crucial for rate limits)
 app.set('trust proxy', 1);
 // swagger
-const swaggerPath = path_1.default.join(__dirname, 'config', 'swagger_output.json');
+const swaggerPath = path_1.default.join(__dirname, 'src', 'config', 'swagger_output.json');
 if (fs_1.default.existsSync(swaggerPath)) {
     const swaggerDocument = JSON.parse(fs_1.default.readFileSync(swaggerPath, 'utf-8'));
     // The local server does not terminate TLS. Swagger must use HTTP in
     // development instead of choosing the first generated HTTPS scheme.
-    if (config_1.config.env === 'development')
+    if (config_1.config.env === 'development') {
         swaggerDocument.schemes = ['http'];
+        swaggerDocument.servers = [{ url: `http://localhost:${config_1.config.port}/api/v1`, description: 'Local development' }];
+    }
     app.use('/api-docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerDocument));
 }
 // Security middlewares

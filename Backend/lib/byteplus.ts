@@ -1,6 +1,9 @@
-import { config } from '../config';
+import { config } from '../src/config';
 
-export async function submitByteplusTask(payload: any) {
+export async function submitByteplusTask(payload: unknown) {
+    if (!config.byteplus.baseUrl || !config.byteplus.apiKey) {
+        throw new Error('BYTEPLUS_BASE_URL and BYTEPLUS_API_KEY are required to submit BytePlus tasks');
+    }
     const response = await fetch(`${config.byteplus.baseUrl}/api/v3/images/generations`, {
         method: 'POST',
         headers: {

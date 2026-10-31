@@ -1,0 +1,200 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CMS Firebase Management API",
+    "description": "Log in with the configured administrator email and password. Use data.accessToken as a Bearer JWT. Local Node serves HTTP; HTTPS requires a TLS proxy.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3002/api/v1",
+      "description": "HTTP"
+    },
+    {
+      "url": "https://localhost:3002/api/v1",
+      "description": "HTTPS via deployment TLS proxy"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Administrator login and authenticated account details."
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "AdminLoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "admin"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "maxLength": 1024,
+            "example": "<admin-password>",
+            "writeOnly": true
+          }
+        }
+      },
+      "AuthenticatedUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "role",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin",
+            "description": "Normalized account identifier"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Administrator"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "editor",
+              "admin"
+            ],
+            "example": "admin"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthSuccessResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Login success"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "accessToken",
+              "tokenType",
+              "expiresIn"
+            ],
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "example": "<access-jwt>"
+              },
+              "tokenType": {
+                "type": "string",
+                "enum": [
+                  "Bearer"
+                ]
+              },
+              "expiresIn": {
+                "type": "string",
+                "example": "15m"
+              }
+            }
+          }
+        }
+      },
+      "CurrentUserResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/AuthenticatedUser"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": 401
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid admin credentials."
+          },
+          "data": {
+            "nullable": true,
+            "example": null
+          }
+        }
+      }
+    }
+  }
+}

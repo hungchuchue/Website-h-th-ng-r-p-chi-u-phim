@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importDefault(require("./app"));
-const database_1 = __importDefault(require("./config/database"));
-const config_1 = require("./config");
+const database_1 = __importDefault(require("./src/config/database"));
+const config_1 = require("./src/config");
 const PORT = config_1.config.port;
 const HOST = config_1.config.host;
 async function startServer() {
