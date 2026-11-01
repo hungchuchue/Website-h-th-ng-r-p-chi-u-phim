@@ -1,0 +1,1 @@
+CREATE TYPE dbo.DanhSachGhe AS TABLE(id_ghe INT NOT NULL PRIMARY KEY);

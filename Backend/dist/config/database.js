@@ -1,19 +1,41 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const pg_1 = require("pg");
-const index_1 = require("./index");
-// Create a connection pool using the provided database URL
-const pool = new pg_1.Pool({
-    connectionString: index_1.config.dbUrl,
-    // Require SSL in production to prevent man-in-the-middle attacks
-    ssl: index_1.config.env === 'production' && process.env.DB_REQUIRE_SSL !== 'false' ? { rejectUnauthorized: true } : false,
-    max: 20, // Max clients in pool
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-});
-pool.on('error', (err, client) => {
-    // Log unexpected errors on idle clients
-    console.error('Unexpected error on idle database client', err);
-});
-exports.default = pool;
-//# sourceMappingURL=database.js.map
+exports.config = void 0;
+const dotenv_1 = __importDefault(require("dotenv"));
+const node_path_1 = require("node:path");
+const envPath = (0, node_path_1.resolve)(__dirname, '../../.env');
+const envResult = dotenv_1.default.config({ path: envPath });
+if (envResult.error)
+    throw new Error(`Unable to load backend environment file: ${envPath}`);
+exports.config = {
+    env: process.env.NODE_ENV || 'development',
+    port: parseInt(process.env.PORT || '3000', 10),
+    host: process.env.HOST || 'localhost',
+    dbUrl: process.env.DATABASE_URL || '',
+    baseUrl: process.env.BASE_URL || '',
+    jwt: {
+        secret: process.env.ADMIN_JWT_SECRET || '',
+        expiresIn: process.env.ADMIN_JWT_EXPIRES_IN || '15m',
+    },
+    admin: {
+        email: process.env.ADMIN_EMAIL || '',
+        password: process.env.ADMIN_PASSWORD || '',
+    },
+};
+if (!exports.config.dbUrl || !exports.config.admin.email || !exports.config.admin.password || !exports.config.jwt.secret) {
+    throw new Error('DATABASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD, and ADMIN_JWT_SECRET are required');
+}
+if (!Number.isInteger(exports.config.port) || exports.config.port < 1 || exports.config.port > 65535) {
+    throw new Error('PORT must be an integer between 1 and 65535');
+}
+// Validate required configs roughly
+if (exports.config.env === 'production') {
+    const required = [
+        'dbUrl', 'byteplus.apiKey', 'byteplus.modelId', 'byteplus.webhookSecret',
+        'r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucketName', 'r2.publicUrl'
+    ];
+    // In a real app we might rigorously check these, for now we let it pass.
+}

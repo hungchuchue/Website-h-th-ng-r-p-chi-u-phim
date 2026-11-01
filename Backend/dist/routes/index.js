@@ -1,8 +1,30 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const auth_routes_1 = require("./auth.routes");
-const apiRouter = (0, express_1.Router)();
-apiRouter.use('/auth', auth_routes_1.adminRouter);
-exports.default = apiRouter;
-//# sourceMappingURL=index.js.map
+const webhook_routes_1 = __importDefault(require("./webhook.routes"));
+const categories_routes_1 = __importDefault(require("./categories.routes"));
+const templates_routes_1 = __importDefault(require("./templates.routes"));
+const image_routes_1 = __importDefault(require("./image.routes"));
+const generate_routes_1 = __importDefault(require("./generate.routes"));
+const rewards_routes_1 = __importDefault(require("./rewards.routes"));
+const ads_routes_1 = __importDefault(require("./ads.routes"));
+const auth_routes_1 = __importDefault(require("./auth.routes"));
+const translate_router_1 = __importDefault(require("./translate.router"));
+const checkin_routes_1 = __importDefault(require("./checkin.routes"));
+const lockscreenPopups_routes_1 = __importDefault(require("./lockscreenPopups.routes"));
+const router = (0, express_1.Router)();
+router.use('/categories', categories_routes_1.default);
+router.use('/generate', generate_routes_1.default);
+router.use('/images', image_routes_1.default);
+router.use('/rewards', rewards_routes_1.default);
+router.use('/ads', ads_routes_1.default);
+router.use('/templates', templates_routes_1.default);
+router.use('/webhooks', webhook_routes_1.default);
+router.use('/auth', auth_routes_1.default);
+router.use('/translate', translate_router_1.default);
+router.use('/checkins', checkin_routes_1.default);
+router.use('/lockscreen-popups', lockscreenPopups_routes_1.default);
+exports.default = router;

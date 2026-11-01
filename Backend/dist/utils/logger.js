@@ -27,6 +27,8 @@ exports.logger = {
                     sanitizedMeta.password = '***';
                 if (sanitizedMeta.token)
                     sanitizedMeta.token = '***';
+                if (sanitizedMeta.integrity_token)
+                    sanitizedMeta.integrity_token = '***';
                 if (sanitizedMeta.purchaseToken)
                     sanitizedMeta.purchaseToken = '***';
                 if (sanitizedMeta.privateKey)
@@ -43,4 +45,3 @@ exports.logger = {
         console.error(`[ERROR] ${message}`, meta ? meta : '');
     }
 };
-//# sourceMappingURL=logger.js.map

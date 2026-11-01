@@ -1,0 +1,100 @@
+SET XACT_ABORT ON;
+IF EXISTS (SELECT 1 FROM sys.tables WHERE schema_id=SCHEMA_ID('dbo') AND name IN
+ ('KHACH_HANG','QUAN_TRI_VIEN','PHIM','CUM_RAP','PHONG_CHIEU','GHE','SUAT_CHIEU','DON_HANG','CHI_TIET_DON_HANG','GHE_SUAT_CHIEU','THANH_TOAN','VE','BUOC_GIAO_DICH','OUTBOX_SU_KIEN'))
+ THROW 51002,N'Cinema objects already exist without this migration history. Inspect and baseline explicitly; no objects were overwritten.',1;
+CREATE TABLE dbo.KHACH_HANG(
+ id INT IDENTITY PRIMARY KEY,email NVARCHAR(254) NOT NULL UNIQUE,mat_khau VARCHAR(256) NOT NULL,
+ ho_ten NVARCHAR(120) NOT NULL,dang_hoat_dong BIT NOT NULL DEFAULT 1,
+ tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME());
+CREATE TABLE dbo.QUAN_TRI_VIEN(
+ id INT IDENTITY PRIMARY KEY,email NVARCHAR(254) NOT NULL UNIQUE,mat_khau VARCHAR(256) NOT NULL,
+ ho_ten NVARCHAR(120) NOT NULL,dang_hoat_dong BIT NOT NULL DEFAULT 1,
+ tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME());
+CREATE TABLE dbo.PHIM(
+ id INT IDENTITY PRIMARY KEY,ten_phim NVARCHAR(200) NOT NULL,mo_ta NVARCHAR(MAX) NOT NULL,
+ the_loai NVARCHAR(200) NOT NULL,dao_dien NVARCHAR(200) NOT NULL,thoi_luong INT NOT NULL CHECK(thoi_luong BETWEEN 1 AND 600),
+ ngay_khoi_chieu DATE NOT NULL,poster_url NVARCHAR(2048) NOT NULL,trailer_url NVARCHAR(2048) NULL,
+ trang_thai VARCHAR(20) NOT NULL DEFAULT 'DANG_CHIEU' CHECK(trang_thai IN('DANG_CHIEU','NGUNG_CHIEU')),
+ tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME());
+CREATE TABLE dbo.CUM_RAP(
+ id INT IDENTITY PRIMARY KEY,ten_cum_rap NVARCHAR(200) NOT NULL,dia_chi NVARCHAR(500) NOT NULL,
+ thanh_pho NVARCHAR(120) NOT NULL,dang_hoat_dong BIT NOT NULL DEFAULT 1);
+CREATE TABLE dbo.PHONG_CHIEU(
+ id INT IDENTITY PRIMARY KEY,id_cum_rap INT NOT NULL REFERENCES dbo.CUM_RAP(id),
+ ten_phong NVARCHAR(100) NOT NULL,dang_hoat_dong BIT NOT NULL DEFAULT 1,
+ CONSTRAINT UQ_PHONG_CUM_TEN UNIQUE(id_cum_rap,ten_phong));
+CREATE TABLE dbo.GHE(
+ id INT IDENTITY PRIMARY KEY,id_phong_chieu INT NOT NULL REFERENCES dbo.PHONG_CHIEU(id),
+ hang_ghe VARCHAR(4) NOT NULL,so_ghe INT NOT NULL CHECK(so_ghe BETWEEN 1 AND 1000),ten_ghe NVARCHAR(20) NOT NULL,
+ loai_ghe VARCHAR(10) NOT NULL DEFAULT 'THUONG' CHECK(loai_ghe IN('THUONG','VIP')),
+ phu_thu DECIMAL(18,2) NOT NULL DEFAULT 0 CHECK(phu_thu>=0),dang_hoat_dong BIT NOT NULL DEFAULT 1,
+ CONSTRAINT UQ_GHE_VI_TRI UNIQUE(id_phong_chieu,hang_ghe,so_ghe),CONSTRAINT UQ_GHE_TEN UNIQUE(id_phong_chieu,ten_ghe),
+ CONSTRAINT UQ_GHE_PHONG UNIQUE(id,id_phong_chieu));
+CREATE TABLE dbo.SUAT_CHIEU(
+ id INT IDENTITY PRIMARY KEY,id_phim INT NOT NULL REFERENCES dbo.PHIM(id),id_phong_chieu INT NOT NULL REFERENCES dbo.PHONG_CHIEU(id),
+ bat_dau_luc DATETIME2(3) NOT NULL,ket_thuc_luc DATETIME2(3) NOT NULL,
+ gia_co_ban DECIMAL(18,2) NOT NULL CHECK(gia_co_ban>=0),trang_thai VARCHAR(16) NOT NULL DEFAULT 'MO_BAN' CHECK(trang_thai IN('MO_BAN','DONG')),
+ CONSTRAINT CK_SUAT_THOI_GIAN CHECK(ket_thuc_luc>bat_dau_luc),CONSTRAINT UQ_SUAT_PHONG UNIQUE(id,id_phong_chieu));
+CREATE INDEX IX_SUAT_PHIM_NGAY ON dbo.SUAT_CHIEU(id_phim,bat_dau_luc) INCLUDE(id_phong_chieu,ket_thuc_luc,gia_co_ban,trang_thai);
+CREATE INDEX IX_SUAT_PHONG_GIO ON dbo.SUAT_CHIEU(id_phong_chieu,bat_dau_luc,ket_thuc_luc);
+CREATE TABLE dbo.DON_HANG(
+ id INT IDENTITY PRIMARY KEY,id_khach_hang INT NOT NULL REFERENCES dbo.KHACH_HANG(id),id_suat_chieu INT NOT NULL REFERENCES dbo.SUAT_CHIEU(id),
+ ma_don VARCHAR(40) COLLATE Latin1_General_100_BIN2 NOT NULL UNIQUE,idempotency_key VARCHAR(128) COLLATE Latin1_General_100_BIN2 NOT NULL,request_hash CHAR(64) NOT NULL,
+ tong_tien DECIMAL(18,2) NOT NULL CHECK(tong_tien>=0),trang_thai VARCHAR(24) NOT NULL DEFAULT 'CHO_THANH_TOAN'
+ CHECK(trang_thai IN('CHO_THANH_TOAN','DA_THANH_TOAN','HOAN_TAT','THAT_BAI','HET_HAN','DA_HUY','CHO_HOAN_TIEN','DA_HOAN_TIEN')),
+ het_han_luc DATETIME2(3) NOT NULL,tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),ly_do_that_bai NVARCHAR(500) NULL,
+ CONSTRAINT UQ_DON_IDEMPOTENCY UNIQUE(id_khach_hang,idempotency_key),CONSTRAINT UQ_DON_SUAT UNIQUE(id,id_suat_chieu));
+CREATE INDEX IX_DON_HET_HAN ON dbo.DON_HANG(trang_thai,het_han_luc) INCLUDE(id_khach_hang,id_suat_chieu);
+CREATE INDEX IX_DON_KHACH ON dbo.DON_HANG(id_khach_hang,tao_luc DESC);
+CREATE TABLE dbo.GHE_SUAT_CHIEU(
+ id_suat_chieu INT NOT NULL,id_ghe INT NOT NULL,id_phong_chieu INT NOT NULL,
+ trang_thai VARCHAR(10) NOT NULL DEFAULT 'TRONG',id_don_hang INT NULL REFERENCES dbo.DON_HANG(id),het_han_luc DATETIME2(3) NULL,
+ CONSTRAINT PK_GHE_SUAT PRIMARY KEY(id_suat_chieu,id_ghe),
+ CONSTRAINT FK_GS_SUAT_PHONG FOREIGN KEY(id_suat_chieu,id_phong_chieu) REFERENCES dbo.SUAT_CHIEU(id,id_phong_chieu),
+ CONSTRAINT FK_GS_GHE_PHONG FOREIGN KEY(id_ghe,id_phong_chieu) REFERENCES dbo.GHE(id,id_phong_chieu),
+ CONSTRAINT CK_GS_TRANG_THAI CHECK((trang_thai='TRONG' AND id_don_hang IS NULL AND het_han_luc IS NULL)
+ OR(trang_thai='DANG_GIU' AND id_don_hang IS NOT NULL AND het_han_luc IS NOT NULL)
+ OR(trang_thai='DA_BAN' AND id_don_hang IS NOT NULL AND het_han_luc IS NULL)));
+CREATE INDEX IX_GS_DON ON dbo.GHE_SUAT_CHIEU(id_don_hang) INCLUDE(trang_thai,het_han_luc,id_suat_chieu,id_ghe);
+CREATE TABLE dbo.CHI_TIET_DON_HANG(
+ id_don_hang INT NOT NULL,id_suat_chieu INT NOT NULL,id_ghe INT NOT NULL,gia_ve DECIMAL(18,2) NOT NULL CHECK(gia_ve>=0),
+ CONSTRAINT PK_CHI_TIET_DON PRIMARY KEY(id_don_hang,id_ghe),
+ CONSTRAINT FK_CT_DON_SUAT FOREIGN KEY(id_don_hang,id_suat_chieu) REFERENCES dbo.DON_HANG(id,id_suat_chieu),
+ CONSTRAINT FK_CT_GHE_SUAT FOREIGN KEY(id_suat_chieu,id_ghe) REFERENCES dbo.GHE_SUAT_CHIEU(id_suat_chieu,id_ghe));
+CREATE TABLE dbo.THANH_TOAN(
+ id INT IDENTITY PRIMARY KEY,id_don_hang INT NOT NULL REFERENCES dbo.DON_HANG(id),ma_yeu_cau VARCHAR(64) COLLATE Latin1_General_100_BIN2 NOT NULL UNIQUE,
+ idempotency_key VARCHAR(128) COLLATE Latin1_General_100_BIN2 NOT NULL,provider VARCHAR(32) NOT NULL,ma_giao_dich_cong VARCHAR(128) COLLATE Latin1_General_100_BIN2 NULL,
+ so_tien DECIMAL(18,2) NOT NULL CHECK(so_tien>=0),so_tien_gateway DECIMAL(18,2) NULL CHECK(so_tien_gateway>=0),don_vi_tien CHAR(3) NOT NULL DEFAULT 'VND' CHECK(don_vi_tien='VND'),
+ trang_thai VARCHAR(24) NOT NULL DEFAULT 'CHO' CHECK(trang_thai IN('CHO','THANH_CONG','THAT_BAI','CHO_HOAN_TIEN','DA_HOAN_TIEN')),
+ ma_hoan_tien VARCHAR(128) COLLATE Latin1_General_100_BIN2 NULL,thoi_gian_tao DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+ thoi_gian_cap_nhat DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT UQ_TT_IDEMPOTENCY UNIQUE(id_don_hang,idempotency_key),CONSTRAINT UQ_TT_DON UNIQUE(id,id_don_hang));
+CREATE UNIQUE INDEX UQ_TT_GATEWAY ON dbo.THANH_TOAN(provider,ma_giao_dich_cong) WHERE ma_giao_dich_cong IS NOT NULL;
+CREATE UNIQUE INDEX UQ_TT_DANG_CHO ON dbo.THANH_TOAN(id_don_hang) WHERE trang_thai='CHO';
+CREATE INDEX IX_TT_DON_LATEST ON dbo.THANH_TOAN(id_don_hang,id DESC) INCLUDE(trang_thai,so_tien,ma_yeu_cau);
+CREATE TABLE dbo.VE(
+ id INT IDENTITY PRIMARY KEY,id_don_hang INT NOT NULL,id_suat_chieu INT NOT NULL,id_ghe INT NOT NULL,
+ ma_ve VARCHAR(40) COLLATE Latin1_General_100_BIN2 NOT NULL UNIQUE,qr_token VARCHAR(64) COLLATE Latin1_General_100_BIN2 NOT NULL UNIQUE,gia_ve DECIMAL(18,2) NOT NULL CHECK(gia_ve>=0),
+ trang_thai VARCHAR(16) NOT NULL DEFAULT 'HOP_LE' CHECK(trang_thai='HOP_LE'),tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT UQ_VE_GHE_SUAT UNIQUE(id_suat_chieu,id_ghe),
+ CONSTRAINT FK_VE_DON_SUAT FOREIGN KEY(id_don_hang,id_suat_chieu) REFERENCES dbo.DON_HANG(id,id_suat_chieu),
+ CONSTRAINT FK_VE_CHI_TIET FOREIGN KEY(id_don_hang,id_ghe) REFERENCES dbo.CHI_TIET_DON_HANG(id_don_hang,id_ghe));
+CREATE INDEX IX_VE_DON ON dbo.VE(id_don_hang) INCLUDE(id_suat_chieu,id_ghe,gia_ve);
+CREATE TABLE dbo.BUOC_GIAO_DICH(
+ id BIGINT IDENTITY PRIMARY KEY,id_don_hang INT NOT NULL REFERENCES dbo.DON_HANG(id),ten_buoc VARCHAR(32) NOT NULL,
+ hanh_dong VARCHAR(16) NOT NULL DEFAULT 'THUC_HIEN' CHECK(hanh_dong IN('THUC_HIEN','BU_TRU')),
+ trang_thai VARCHAR(20) NOT NULL CHECK(trang_thai IN('CHO','THANH_CONG','THAT_BAI')),
+ thong_diep NVARCHAR(500) NULL,tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME());
+CREATE INDEX IX_BUOC_DON ON dbo.BUOC_GIAO_DICH(id_don_hang,tao_luc,id);
+CREATE TABLE dbo.OUTBOX_SU_KIEN(
+ id BIGINT IDENTITY PRIMARY KEY,event_key VARCHAR(80) COLLATE Latin1_General_100_BIN2 NOT NULL UNIQUE,id_don_hang INT NOT NULL REFERENCES dbo.DON_HANG(id),id_thanh_toan INT NULL,
+ loai_su_kien VARCHAR(20) NOT NULL CHECK(loai_su_kien IN('PHAT_HANH_VE','HOAN_TIEN')),
+ trang_thai VARCHAR(16) NOT NULL DEFAULT 'CHO' CHECK(trang_thai IN('CHO','THAT_BAI','HOAN_TAT')),
+ so_lan_thu INT NOT NULL DEFAULT 0 CHECK(so_lan_thu>=0),so_lan_xu_ly INT NOT NULL DEFAULT 0 CHECK(so_lan_xu_ly BETWEEN 0 AND 5),
+ xu_ly_sau DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),lock_token UNIQUEIDENTIFIER NULL,locked_until DATETIME2(3) NULL,
+ thong_diep_loi NVARCHAR(500) NULL,tao_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),cap_nhat_luc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT FK_OUTBOX_TT_DON FOREIGN KEY(id_thanh_toan,id_don_hang) REFERENCES dbo.THANH_TOAN(id,id_don_hang),
+ CONSTRAINT CK_OUTBOX_LOAI CHECK((loai_su_kien='PHAT_HANH_VE' AND id_thanh_toan IS NULL) OR(loai_su_kien='HOAN_TIEN' AND id_thanh_toan IS NOT NULL)),
+ CONSTRAINT CK_OUTBOX_LEASE CHECK((lock_token IS NULL AND locked_until IS NULL) OR(lock_token IS NOT NULL AND locked_until IS NOT NULL)));
+CREATE INDEX IX_OUTBOX_SAN_SANG ON dbo.OUTBOX_SU_KIEN(trang_thai,xu_ly_sau,locked_until,so_lan_xu_ly) INCLUDE(event_key,loai_su_kien,id_don_hang,id_thanh_toan);
+

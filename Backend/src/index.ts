@@ -1,6 +1,7 @@
 import app from './app';
 import pool from './config/database';
 import { config } from './config';
+import { startCinemaRuntime, stopCinemaRuntime } from './jobs/cinema.runtime';
 
 const PORT = config.port;
 const HOST = config.host;
@@ -14,6 +15,8 @@ async function startServer() {
     } finally {
       client.release();
     }
+
+    await startCinemaRuntime();
 
     const server = app.listen(PORT, HOST, (error?: Error) => {
       if (error) return;
@@ -31,7 +34,7 @@ async function startServer() {
         console.error('[System] HTTP server failed:', { code: error.code || 'UNKNOWN' });
       }
 
-      pool.end(() => process.exit(1));
+      void stopCinemaRuntime().finally(() => pool.end(() => process.exit(1)));
     });
 
     // Handle graceful shutdowns
@@ -39,10 +42,10 @@ async function startServer() {
       console.log('\n[System] Gracefully shutting down...');
       server.close(() => {
         console.log('[System] Server closed.');
-        pool.end(() => {
+        void stopCinemaRuntime().finally(() => pool.end(() => {
           console.log('[System] Database connections closed.');
           process.exit(0);
-        });
+        }));
       });
     };
 

@@ -1,214 +1,2908 @@
 {
-  "openapi": "3.0.0",
+  "swagger": "2.0",
   "info": {
-    "title": "CMS Firebase Management API",
-    "description": "Log in with the configured administrator email and password. Use data.accessToken as a Bearer JWT. Local Node serves HTTP; HTTPS requires a TLS proxy.",
-    "version": "1.0.0"
+    "title": "AI Gen Image API",
+    "version": "1.0.0",
+    "description": "Tài liệu API cho hệ thống tạo Hình ảnh bằng AI"
   },
-  "servers": [
-    {
-      "url": "http://localhost:3002/api/v1",
-      "description": "HTTP"
-    },
-    {
-      "url": "https://localhost:3002/api/v1",
-      "description": "HTTPS via deployment TLS proxy"
-    }
-  ],
-  "tags": [
-    {
-      "name": "Auth",
-      "description": "Administrator login and authenticated account details."
-    }
+  "basePath": "/",
+  "schemes": [
+    "https",
+    "http"
   ],
   "paths": {
-    "/auth/login": {
-      "post": {
+    "/health": {
+      "get": {
         "description": "",
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "410": {
+            "description": "Device is temporarily blocked due to suspicious AdMob callback activity"
           }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "example": "any"
+        }
+      }
+    },
+    "/api/v1/auth/cache": {
+      "get": {
+        "description": "Debug endpoint to view cache contents",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Login successful"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "number",
+                      "example": 1800
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "number",
+                          "example": 1
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "admin-2@example.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "admin"
+                        },
+                        "admin_key": {
+                          "type": "string",
+                          "example": "2"
+                        },
+                        "api_target": {
+                          "type": "string",
+                          "example": "2"
+                        },
+                        "allowed_api_targets": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": [
+                            "2"
+                          ]
+                        },
+                        "default_api_target": {
+                          "type": "string",
+                          "example": "2"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/checkins": {
+      "post": {
+        "tags": [
+          "Checkins"
+        ],
+        "description": "Initialize or load daily check-in state for a device.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "device_id"
+              ],
+              "properties": {
+                "device_id": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Optional country code. Defaults to all. New devices keep this country for future check-in progress."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "503": {
+            "description": "Daily check-in category is not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/configs": {
+      "get": {
+        "tags": [
+          "Checkins"
+        ],
+        "description": "List daily check-in template configs. Admin only.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Optional country code. Use all for fallback configs."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/configs/{country_code}/{day_slot}": {
+      "put": {
+        "tags": [
+          "Checkins"
+        ],
+        "description": "Set one daily check-in template for a country/day slot. country_code=all is the fallback set. Admin only.",
+        "parameters": [
+          {
+            "name": "country_code",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "day_slot",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 14
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "template_id"
+              ],
+              "properties": {
+                "template_id": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Template not found"
+          }
+        }
+      }
+    },
+    "/api/v1/checkins/unlock": {
+      "post": {
+        "tags": [
+          "Checkins"
+        ],
+        "description": "Unlock one daily check-in template. day_number is the displayed day from 1 to 7.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "device_id",
+                "day_number",
+                "unlock_source"
+              ],
+              "properties": {
+                "device_id": {
+                  "type": "string"
+                },
+                "day_number": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                },
+                "unlock_source": {
+                  "type": "string",
+                  "enum": [
+                    "checkin",
+                    "ads"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Already unlocked"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "409": {
+            "description": "Invalid unlock timing"
+          },
+          "503": {
+            "description": "Daily check-in category is not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/list": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. in. Categories with zero visible templates for this country are hidden."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/list/admin": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. in. Optional filter for CMS admin."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/": {
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_all_countries": {
+                  "type": "boolean"
+                },
+                "countries": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   },
-                  "password": {
-                    "example": "any"
+                  "description": "Mảng country code trong SUPPORTED_COUNTRIES. Bắt buộc có ít nhất 1 phần tử khi is_all_countries=false"
+                },
+                "localized_names": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
                   }
                 }
               }
             }
           }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
         }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
       }
     },
-    "schemas": {
-      "AdminLoginRequest": {
-        "type": "object",
-        "required": [
-          "email",
-          "password"
+    "/api/v1/categories/update/{id}": {
+      "put": {
+        "tags": [
+          "Categories"
         ],
-        "additionalProperties": false,
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-            "example": "admin"
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "minLength": 1,
-            "maxLength": 1024,
-            "example": "<admin-password>",
-            "writeOnly": true
-          }
-        }
-      },
-      "AuthenticatedUser": {
-        "type": "object",
-        "required": [
-          "id",
-          "email",
-          "displayName",
-          "role",
-          "isActive",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
           },
-          "email": {
-            "type": "string",
-            "example": "admin",
-            "description": "Normalized account identifier"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true,
-            "example": "Administrator"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "user",
-              "editor",
-              "admin"
-            ],
-            "example": "admin"
-          },
-          "isActive": {
-            "type": "boolean",
-            "example": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "AuthSuccessResponse": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "data"
-        ],
-        "properties": {
-          "code": {
-            "type": "integer",
-            "example": 200
-          },
-          "message": {
-            "type": "string",
-            "example": "Login success"
-          },
-          "data": {
-            "type": "object",
-            "required": [
-              "accessToken",
-              "tokenType",
-              "expiresIn"
-            ],
-            "properties": {
-              "accessToken": {
-                "type": "string",
-                "example": "<access-jwt>"
-              },
-              "tokenType": {
-                "type": "string",
-                "enum": [
-                  "Bearer"
-                ]
-              },
-              "expiresIn": {
-                "type": "string",
-                "example": "15m"
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "is_all_countries": {
+                  "type": "boolean"
+                },
+                "countries": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Mảng country code trong SUPPORTED_COUNTRIES. Bắt buộc có ít nhất 1 phần tử khi is_all_countries=false"
+                },
+                "localized_names": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
-        }
-      },
-      "CurrentUserResponse": {
-        "type": "object",
-        "required": [
-          "success",
-          "data"
         ],
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/{id}/set-checkin-special": {
+      "put": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "Set one category as the daily check-in category. The category must contain at least 14 enabled templates with continuous sort_order from 1 to N.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           },
-          "data": {
-            "$ref": "#/components/schemas/AuthenticatedUser"
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid check-in category"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/apply-countries/{id}/templates": {
+      "patch": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "Áp dụng country settings hiện tại của category xuống toàn bộ templates thuộc category đó",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/sort/{id}": {
+      "patch": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sort_order": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/categories/delete/{id}": {
+      "delete": {
+        "tags": [
+          "Categories"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/generate/upload/presign": {
+      "post": {
+        "tags": [
+          "Generate"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "fileType": {
+                  "type": "string"
+                },
+                "ratio": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "fileSize": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/generate/submit": {
+      "post": {
+        "tags": [
+          "Generate"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "session_id": {
+                  "type": "string"
+                },
+                "template_id": {
+                  "type": "string"
+                },
+                "gift_code": {
+                  "type": "string"
+                },
+                "image_key": {
+                  "type": "string"
+                },
+                "ratio": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/generate/verify/gift-code": {
+      "post": {
+        "tags": [
+          "Generate"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": false,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "gift_code": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/images/history": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/images/status/batch": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "task_ids": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/images/{taskId}": {
+      "get": {
+        "tags": [
+          "Images"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/images/upscale": {
+      "post": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Nâng độ phân giải ảnh và lưu vào R2",
+        "description": "Gửi mã thiết bị bằng header X-Device-ID. Trước tiên upload ảnh qua /api/v1/generate/upload/presign, sau đó gửi original_file_name trong trường image_key. Backend tạo URL R2 từ image_key để thực hiện upscale.",
+        "operationId": "upscaleImage",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "X-Device-ID",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "description": "Mã thiết bị; bắt buộc gửi trong header.",
+            "default": "postman-upscale-test"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "image_key": {
+                  "type": "string",
+                  "description": "Dùng original_file_name trả về từ upload/presign sau khi đã PUT ảnh thành công lên upload_url."
+                }
+              },
+              "required": [
+                "image_key"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ảnh đã upload R2 thành công. Các URL dưới đây là ví dụ.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": {
+                      "type": "integer",
+                      "example": 21721
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "succeeded"
+                    },
+                    "image_url": {
+                      "type": "string",
+                      "example": "https://r2.example.com/faceswap/postman-upscale-test/results/result.jpg"
+                    },
+                    "error_message": {
+                      "type": "string",
+                      "x-nullable": true,
+                      "example": null
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "x-nullable": true,
+                      "example": null
+                    },
+                    "source_image_url": {
+                      "type": "string",
+                      "example": "https://r2.example.com/users/postman-upscale-test/sources/550e8400-e29b-41d4-a716-446655440000.jpg"
+                    },
+                    "ratio": {
+                      "type": "string",
+                      "example": "9:16"
+                    },
+                    "ratio_size": {
+                      "type": "string",
+                      "example": "576x1024"
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "estimated_tokens": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "actual_tokens": {
+                      "type": "integer",
+                      "x-nullable": true,
+                      "example": null
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu X-Device-ID hoặc thiếu image_key.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 400
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Header X-Device-ID is required"
+                },
+                "data": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "429": {
+            "description": "Provider báo hết quota hoặc giới hạn yêu cầu.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 429
+                },
+                "message": {
+                  "type": "string",
+                  "example": "RapidAPI Upscaler quota exceeded (429): quota exceeded"
+                },
+                "data": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi nội bộ không mong đợi.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 500
+                },
+                "message": {
+                  "type": "string",
+                  "example": "An unexpected error occurred."
+                },
+                "data": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "502": {
+            "description": "Lỗi provider, xử lý kết quả hoặc lưu R2.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number",
+                  "example": 502
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Image upscaling failed."
+                },
+                "data": {}
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          }
+        },
+        "autoBody": false,
+        "autoHeaders": false
+      }
+    },
+    "/api/v1/ads/sessions": {
+      "post": {
+        "tags": [
+          "Rewards"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "410": {
+            "description": "Device is temporarily blocked due to suspicious AdMob callback activity"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/ads/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "Rewards"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "410": {
+            "description": "Gone"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/ads/integrity/verify": {
+      "post": {
+        "tags": [
+          "Rewards"
+        ],
+        "description": "Verify a Play Integrity token for the current device. If an active cached token exists, backend reuses it. If no cached token exists or the cached token is expired, backend verifies the token with Google Play Integrity and saves a new 30-day cache entry. This endpoint does not count an ad view and does not require a reward session. Null or empty integrity_token is accepted as a bypass response.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": "Device ID used to bind and cache the Play Integrity token"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": false,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "integrity_token": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Opaque Play Integrity token from Android. Send null or omit to receive a bypass response."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integrity token verified",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "example": 200
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Integrity token verified"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing device ID"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/ads/sessions/{session_id}/reward": {
+      "post": {
+        "tags": [
+          "Rewards"
+        ],
+        "description": "Submit one rewarded-ad completion for an existing reward session. This endpoint only increments ads_watched and updates the session to ready when ads_required is reached. It does not accept or verify an integrity token.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": "Device ID bound to the reward session"
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Reward ad session ID created by POST /api/v1/ads/sessions"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward submitted",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "example": 200
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "ads_watched": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "ads_required": {
+                      "type": "integer",
+                      "example": 6
+                    },
+                    "ready": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "pending"
+                    }
+                  }
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Reward submitted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Ad session not found"
+          },
+          "409": {
+            "description": "Ad session is expired or already used"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/admob/callback": {
+      "get": {
+        "tags": [
+          "Rewards"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "ad_network",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "ad_unit",
+            "in": "query",
+            "type": "string",
+            "required": true,
+            "description": "AdMob ad unit ID, used to validate against allowed ad units"
+          },
+          {
+            "name": "reward_amount",
+            "in": "query",
+            "type": "integer"
+          },
+          {
+            "name": "reward_item",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "transaction_id",
+            "in": "query",
+            "type": "string",
+            "required": true,
+            "description": "AdMob transaction ID for this reward"
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "type": "string",
+            "required": true,
+            "description": "Base64-encoded signature of the reward data, used for verification"
+          },
+          {
+            "name": "key_id",
+            "in": "query",
+            "type": "string",
+            "required": true,
+            "description": "Key ID used to identify which public key to use for signature verification"
+          },
+          {
+            "name": "custom_data",
+            "in": "query",
+            "type": "string",
+            "required": true,
+            "description": "Session ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn"
+          },
+          {
+            "name": "include_disabled",
+            "in": "query",
+            "type": "boolean",
+            "description": "true = trả cả templates đã bị tắt; mặc định chỉ trả template enabled"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/all": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn"
+          },
+          {
+            "name": "include_disabled",
+            "in": "query",
+            "type": "boolean",
+            "description": "true = trả cả templates đã bị tắt; mặc định chỉ trả template enabled"
+          },
+          {
+            "name": "type_id",
+            "in": "query",
+            "type": "integer",
+            "description": "Template type ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/categories/{slug}": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn"
+          },
+          {
+            "name": "include_disabled",
+            "in": "query",
+            "type": "boolean",
+            "description": "true = trả cả templates đã bị tắt; mặc định chỉ trả template enabled"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/type": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "Lấy danh sách template_types để hiển thị trên CMS",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "type_name": {
+                        "type": "string",
+                        "example": "swap_face"
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Swap face"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/type/{id}": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "Lấy danh sách templates theo template type id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "ID trong bảng template_types"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn"
+          },
+          {
+            "name": "include_disabled",
+            "in": "query",
+            "type": "boolean",
+            "description": "true = trả cả templates đã bị tắt; mặc định chỉ trả template enabled"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/daily": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "Lấy random 1 template từ category slug 'all'. Mỗi lần gọi API sẽ random lại, không cache theo ngày.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "image_url": {
+                      "type": "string"
+                    },
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "ratio": {
+                      "type": "string",
+                      "example": "9:16"
+                    },
+                    "type_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "is_enabled": {
+                      "type": "boolean"
+                    },
+                    "is_all_countries": {
+                      "type": "boolean"
+                    },
+                    "countries": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "nullable": true
+                    },
+                    "category_slugs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No template found in category 'all'"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/{id}": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "category_slugs",
+            "in": "formData",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng danh sách các slugs danh mục"
+          },
+          {
+            "name": "image",
+            "in": "formData",
+            "required": true,
+            "type": "file"
+          },
+          {
+            "name": "prompt",
+            "in": "formData",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ratio",
+            "in": "formData",
+            "required": false,
+            "type": "string",
+            "description": "Default ratio for this template. Supported: 1:1, 1:2, 3:2, 3:4, 16:9, 9:16. Defaults to 9:16."
+          },
+          {
+            "name": "type_ids",
+            "in": "formData",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng ID trong bảng template_types. Ví dụ: 1 = swap_face, 2 = text_to_image"
+          },
+          {
+            "name": "is_all_countries",
+            "in": "formData",
+            "required": false,
+            "type": "boolean",
+            "description": "true = hiển thị tất cả quốc gia; false = chỉ hiển thị trong countries. Nếu không gửi khi tạo template, backend dùng mặc định từ category đầu tiên."
+          },
+          {
+            "name": "countries",
+            "in": "formData",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng country code trong SUPPORTED_COUNTRIES. Bắt buộc có ít nhất 1 phần tử khi is_all_countries=false"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/add": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "template_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "category_slug": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/update/{id}": {
+      "put": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "category_slugs",
+            "in": "formData",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng danh sách các slugs danh mục được cập nhật"
+          },
+          {
+            "name": "image",
+            "in": "formData",
+            "required": false,
+            "type": "file"
+          },
+          {
+            "name": "prompt",
+            "in": "formData",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ratio",
+            "in": "formData",
+            "required": false,
+            "type": "string",
+            "description": "Default ratio for this template. Supported: 1:1, 1:2, 3:2, 3:4, 16:9, 9:16. Defaults to 9:16."
+          },
+          {
+            "name": "type_ids",
+            "in": "formData",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng ID trong bảng template_types. Ví dụ: 1 = swap_face, 2 = text_to_image"
+          },
+          {
+            "name": "is_all_countries",
+            "in": "formData",
+            "required": true,
+            "type": "boolean",
+            "description": "true = hiển thị tất cả quốc gia; false = chỉ hiển thị trong countries"
+          },
+          {
+            "name": "countries",
+            "in": "formData",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "description": "Mảng country code trong SUPPORTED_COUNTRIES. Bắt buộc có ít nhất 1 phần tử khi is_all_countries=false"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/visibility/{id}": {
+      "patch": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "Update template visibility inside one category only.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "category_slug",
+                "is_enabled"
+              ],
+              "properties": {
+                "category_slug": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean",
+                  "description": "true = hiện trong category này; false = ẩn khỏi category này"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/sort/{id}": {
+      "patch": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sort_order": {
+                  "type": "integer"
+                },
+                "category_slug": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/reorder": {
+      "put": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "category_slug": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "template_id": {
+                        "type": "string"
+                      },
+                      "sort_order": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/remove/{id}": {
+      "patch": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "category_slug": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/templates/delete/{id}": {
+      "delete": {
+        "tags": [
+          "Templates"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/byteplus": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/current": {
+      "get": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "Lấy popup hiện tại cho app. BE tự tính slot gần nhất theo UTC dựa trên slot_time đang được cấu hình trong DB/CMS. Manual active được ưu tiên trước auto; nếu auto chưa có thì BE tự random template và tạo record. Auto popup sẽ random title/description từ lockscreen_auto_texts enabled; nếu không có item enabled thì title/description rỗng.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Supported country code from SUPPORTED_COUNTRIES, e.g. vn. Optional."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "example": 200
+                },
+                "message": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "manual"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive",
+                        "cancelled"
+                      ]
+                    },
+                    "scheduled_date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "slot_time": {
+                      "type": "string",
+                      "example": "08:45:00",
+                      "description": "UTC time in HH:mm:ss format"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "template_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "image_url": {
+                      "type": "string"
+                    },
+                    "country_code": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Country code for this popup record. null means global/all."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin": {
+      "get": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS list lockscreen popups",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "scheduled_date",
+            "in": "query",
+            "type": "string",
+            "description": "YYYY-MM-DD"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "auto",
+              "manual"
+            ]
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "type": "string",
+            "description": "Country code filter, e.g. vn. Use all or omit this query to show every record. Use global to show records where country_code is null."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       },
-      "ApiError": {
-        "type": "object",
-        "required": [
-          "code",
-          "message",
-          "data"
+      "post": {
+        "tags": [
+          "Lockscreen Popups"
         ],
-        "properties": {
-          "code": {
-            "type": "integer",
-            "example": 401
+        "description": "CMS tạo popup manual hoặc auto theo date/slot. Không lưu button_text và không lưu image_url; app lấy ảnh từ template.image_url. Với auto, title/description có thể rỗng để app tự xử lý text.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
           },
-          "message": {
-            "type": "string",
-            "example": "Invalid admin credentials."
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "scheduled_date",
+                "slot_time",
+                "template_id"
+              ],
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "manual"
+                  ],
+                  "example": "manual"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "cancelled"
+                  ],
+                  "example": "active"
+                },
+                "scheduled_date": {
+                  "type": "string",
+                  "example": "2026-09-10"
+                },
+                "slot_time": {
+                  "type": "string",
+                  "example": "08:45:00",
+                  "description": "UTC time in HH:mm or HH:mm:ss format"
+                },
+                "template_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Bắt buộc khi mode=manual; có thể rỗng khi mode=auto"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Bắt buộc khi mode=manual; có thể rỗng khi mode=auto"
+                },
+                "country_code": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "vn",
+                  "description": "Optional country code. null/omitted/all means global."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
           },
-          "data": {
-            "nullable": true,
-            "example": null
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin/{id}": {
+      "put": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS cập nhật popup",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "cancelled"
+                  ]
+                },
+                "scheduled_date": {
+                  "type": "string",
+                  "example": "2026-09-10"
+                },
+                "slot_time": {
+                  "type": "string",
+                  "example": "15:45:00",
+                  "description": "UTC time in HH:mm or HH:mm:ss format"
+                },
+                "template_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "manual"
+                  ]
+                },
+                "country_code": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "vn",
+                  "description": "Optional country code. null/all means global."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS xoá popup",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin/slots": {
+      "get": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS list các slot giờ UTC dùng để tính popup current",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS tạo slot giờ UTC mới. slot_time dùng HH:mm hoặc HH:mm:ss.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "slot_time"
+              ],
+              "properties": {
+                "slot_time": {
+                  "type": "string",
+                  "example": "08:45:00"
+                },
+                "is_enabled": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin/slots/{id}": {
+      "put": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS cập nhật slot giờ UTC",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "slot_time": {
+                  "type": "string",
+                  "example": "15:45:00"
+                },
+                "is_enabled": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS xoá slot giờ UTC",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/translate/": {
+      "post": {
+        "tags": [
+          "Translate"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin/auto-texts": {
+      "get": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS list title/description pool dùng để random cho lockscreen auto popup.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS tạo title/description cho pool random auto popup.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "title",
+                "description"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/lockscreen-popups/admin/auto-texts/{id}": {
+      "put": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS cập nhật title/description trong pool random auto popup.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lockscreen Popups"
+        ],
+        "description": "CMS xoá title/description khỏi pool random auto popup.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
           }
         }
       }

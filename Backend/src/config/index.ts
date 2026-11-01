@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { resolve } from 'node:path';
+import { backendRoot } from './backend-path';
 
-const envPath = resolve(__dirname, '../../.env');
+const envPath = resolve(backendRoot(), '.env');
 const envResult = dotenv.config({ path: envPath });
 if (envResult.error) throw new Error(`Unable to load backend environment file: ${envPath}`);
 
@@ -19,6 +20,12 @@ export const config = {
     admin: {
         email: process.env.ADMIN_EMAIL || '',
         password: process.env.ADMIN_PASSWORD || '',
+    },
+    byteplus: {
+        baseUrl: process.env.BYTEPLUS_BASE_URL || '',
+        apiKey: process.env.BYTEPLUS_API_KEY || '',
+        modelId: process.env.BYTEPLUS_MODEL_ID || '',
+        webhookSecret: process.env.BYTEPLUS_WEBHOOK_SECRET || '',
     },
 };
 

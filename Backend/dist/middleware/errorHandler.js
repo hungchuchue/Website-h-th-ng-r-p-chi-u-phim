@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AppError = exports.errorHandler = void 0;
+exports.errorHandler = void 0;
 const logger_1 = require("../utils/logger");
-Object.defineProperty(exports, "AppError", { enumerable: true, get: function () { return logger_1.AppError; } });
 const errorHandler = (err, req, res, next) => {
     console.error(`[Error] ${err.message}`, err);
     if (err instanceof logger_1.AppError) {
@@ -20,4 +19,3 @@ const errorHandler = (err, req, res, next) => {
     });
 };
 exports.errorHandler = errorHandler;
-//# sourceMappingURL=errorHandler.js.map

@@ -3,50 +3,60 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkIsNumberId = exports.hashPassword = void 0;
-exports.verifyPassword = verifyPassword;
+exports.isLowercaseSha256Hex = exports.hashToken = exports.hashPassword = exports.calculateTokensPerVideo = void 0;
+exports.validateLoginBody = validateLoginBody;
+exports.validateSlug = validateSlug;
+const types_1 = require("../types");
 const crypto_1 = __importDefault(require("crypto"));
+const calculateTokensPerVideo = (ratio) => {
+    const { width, height } = types_1.BYTEPLUS_RATIO_MAPPING[ratio].size.split('x').reduce((acc, val, idx) => {
+        if (idx === 0)
+            acc.width = parseInt(val, 10);
+        else
+            acc.height = parseInt(val, 10);
+        return acc;
+    }, { width: 0, height: 0 });
+    return Math.floor(((width * height * 3) / 1024) * 1.3);
+};
+exports.calculateTokensPerVideo = calculateTokensPerVideo;
+function validateLoginBody(body) {
+    if (!body || typeof body !== 'object') {
+        return 'Request body is required';
+    }
+    const { email, password } = body;
+    if (!email || typeof email !== 'string' || !email.trim()) {
+        return 'Email is required';
+    }
+    if (!password || typeof password !== 'string') {
+        return 'Password is required';
+    }
+    if (password.length < 6) {
+        return 'Password must be at least 6 characters';
+    }
+    return null;
+}
+function validateSlug(slug) {
+    if (!slug || typeof slug !== 'string' || !slug.trim()) {
+        throw new Error('Slug is required');
+    }
+    return slug
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/(^_|_$)+/g, '');
+}
 const hashPassword = (password) => {
     const SALT = 'iuBred7xZFNlaP6ygiTeB3kd2ATINGRo4R0byYCjHgG';
     return crypto_1.default.pbkdf2Sync(password, SALT, 1000, 64, 'sha256').toString('hex');
 };
 exports.hashPassword = hashPassword;
-async function verifyPassword(password, storedHash) {
-    // Keep compatibility with the legacy hash produced by hashPassword.
-    if (/^[0-9a-f]{128}$/i.test(storedHash)) {
-        return crypto_1.default.timingSafeEqual(Buffer.from((0, exports.hashPassword)(password), 'hex'), Buffer.from(storedHash, 'hex'));
-    }
-    const match = storedHash.match(/^pbkdf2_sha256\$(\d+)\$([^$]+)\$([A-Za-z0-9_-]{43})$/);
-    if (!match)
-        return false;
-    const iterations = Number(match[1]);
-    if (!Number.isSafeInteger(iterations) || iterations < 1 || iterations > 2_000_000)
-        return false;
-    const salt = match[2];
-    const expected = Buffer.from(match[3], 'base64url');
-    if (expected.length !== 32 || expected.toString('base64url') !== match[3])
-        return false;
-    const actual = await new Promise((resolve, reject) => {
-        crypto_1.default.pbkdf2(password, salt, iterations, expected.length, 'sha256', (error, result) => {
-            if (error)
-                reject(error);
-            else
-                resolve(result);
-        });
-    });
-    return crypto_1.default.timingSafeEqual(actual, expected);
-}
-const checkIsNumberId = (id) => {
-    // 1. Kiểm tra xem chuỗi có phải chỉ chứa các ký số từ 0-9 hay không
-    const isPureDigits = /^\d+$/.test(id);
-    if (!isPureDigits)
-        return false;
-    // 2. Chặn các số quá dài có thể gây tràn số JS hoặc tràn số DB (INTEGER tối đa 10 chữ số)
-    if (id.length > 10)
-        return false;
-    // 3. Nếu là số hợp lệ, ép kiểu về number và check > 0
-    const num = Number(id);
-    return num > 0 && num <= 2147483647; // Tối đa của INT trong DB
+const hashToken = (token) => {
+    return crypto_1.default.createHash('sha256').update(token).digest('hex');
 };
-exports.checkIsNumberId = checkIsNumberId;
-//# sourceMappingURL=validation.js.map
+exports.hashToken = hashToken;
+const isLowercaseSha256Hex = (value) => {
+    return /^[a-f0-9]{64}$/.test(value);
+};
+exports.isLowercaseSha256Hex = isLowercaseSha256Hex;

@@ -32,7 +32,7 @@ app.use(helmet());
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-ID']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-ID', 'Idempotency-Key', 'X-Correlation-Id']
 }));
 
 // Body parsers

@@ -6,9 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAdMobKeys = getAdMobKeys;
 exports.verifyAdMobCallback = verifyAdMobCallback;
 const crypto_1 = __importDefault(require("crypto"));
-const ADMOB_KEYS_URL = 'https://www.gstatic.com/admob/reward/verifier-keys.json';
-let cachedKeys = null;
-let keysCachedAt = 0;
+const ADMOB_KEYS_URL = 'https://www.gstatic.com/admob/reward/verifier-keys.json'; //Đây là địa chỉ backend dùng để lấy public key phục vụ xác minh AdMob reward callback.
+let cachedKeys = null; //Biến nhớ tạm danh sách key đã tải (ban đầu là null, tức chưa có)
+let keysCachedAt = 0; //Ghi lại thời điểm đã tải key (ban đầu là 0)
 const KEY_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 async function getAdMobKeys() {
     if (cachedKeys && (Date.now() - keysCachedAt) < KEY_CACHE_TTL) {
@@ -58,4 +58,3 @@ async function verifyAdMobCallback(rawQueryString, signature, key_id) {
         return false;
     }
 }
-//# sourceMappingURL=admob.js.map

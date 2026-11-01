@@ -1,24 +1,22 @@
-import { ErrorRequestHandler } from 'express';
-import { AppError, logger } from '../utils/logger';
+import { Request, Response, NextFunction } from 'express';
+import { BaseResponse } from '../types/responses';
+import { AppError } from '../utils/logger';
 
-export { AppError } from '../utils/logger';
+export const errorHandler = (err: Error, req: Request, res: Response<BaseResponse<null>>, next: NextFunction) => {
+  console.error(`[Error] ${err.message}`, err);
 
-export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, next) => {
-  if (res.headersSent) {
-    next(error);
-    return;
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      code: err.statusCode,
+      message: err.message,
+      data: null
+    });
   }
 
-  if (error instanceof AppError) {
-    res.status(error.statusCode).json({ code: error.statusCode, message: error.message, data: null });
-    return;
-  }
-
-  if (error instanceof SyntaxError && 'status' in error && error.status === 400) {
-    res.status(400).json({ code: 400, message: 'Invalid JSON request body.', data: null });
-    return;
-  }
-
-  logger.error('Unhandled request error', { name: error instanceof Error ? error.name : 'UnknownError' });
-  res.status(500).json({ code: 500, message: 'An unexpected error occurred.', data: null });
+  // Default 500
+  res.status(500).json({
+    code: 500,
+    message: 'An unexpected error occurred.',
+    data: null
+  });
 };
